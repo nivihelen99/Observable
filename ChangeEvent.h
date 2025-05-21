@@ -20,3 +20,4 @@ struct ChangeEvent {
 };
 
 #endif // CHANGE_EVENT_H
+
