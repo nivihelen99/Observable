@@ -16,8 +16,8 @@
 // Forward declaration
 template <
     typename T,
-    template <typename, typename> class ActualContainer = std::vector,
-    typename Allocator = std::allocator<T>
+    template <typename, typename> class ActualContainer, 
+    typename Allocator
 >
 class ObservableContainer;
 
@@ -83,10 +83,9 @@ namespace ObservableContainerHelpers {
     };
 } // namespace ObservableContainerHelpers
 
-
 template <
     typename T,
-    template <typename, typename> class ActualContainer = std::vector,
+    template <typename, typename> class ActualContainer = std::vector, // Default here
     typename Allocator = std::allocator<T>
 >
 class ObservableContainer {
@@ -101,11 +100,15 @@ private:
     bool batch_changed_ = false;
     mutable std::mutex mutex_; // Mutex for thread safety
     inline static ObserverHandle nextHandleId_ = 0; 
+    bool is_moved_from_ = false;
 
     void notify(ChangeType type,
                 std::optional<size_t> index = std::nullopt,
                 std::optional<T> oldValue = std::nullopt,
                 std::optional<T> newValue = std::nullopt) {
+        if (is_moved_from_) {
+            return; // Moved-from object should not send notifications
+        }
         std::list<ObserverCallback> observers_to_call_functions;
         bool should_call_observers = false;
 
@@ -179,6 +182,7 @@ public:
         other.observers_.clear(); 
         other.defer_level_ = 0;
         other.batch_changed_ = false;
+        other.is_moved_from_ = true;
     }
 
     // Move Assignment Operator
@@ -189,13 +193,15 @@ public:
         { 
             std::scoped_lock lock(mutex_, other.mutex_);
             data_ = std::move(other.data_);
-            observers_.clear(); 
-            defer_level_ = other.defer_level_;
-            batch_changed_ = other.batch_changed_;
+            // observers_ are intentionally not cleared for 'this'
+            defer_level_ = other.defer_level_; // Or reset, depending on desired state for 'this'
+            batch_changed_ = other.batch_changed_; // Or reset
+            
             other.data_.clear(); 
             other.observers_.clear();
             other.defer_level_ = 0;
             other.batch_changed_ = false;
+            other.is_moved_from_ = true;
         } 
         notify(ChangeType::BatchUpdate);
         return *this;
