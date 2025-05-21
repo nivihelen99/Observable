@@ -32,17 +32,24 @@ int main() {
     ObservableContainer<int> oc;
 
     // Define observer lambdas
-    auto observer1 = [](const ChangeEvent& event) {
-        std::cout << "Observer 1 detected: " << ChangeTypeToString(event.type) << std::endl;
+    auto observer1 = [](const ChangeEvent<int>& event) {
+        std::cout << "Observer 1 detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
 
-    auto observer2 = [](const ChangeEvent& event) {
-        std::cout << "  Observer 2 detected: " << ChangeTypeToString(event.type) << std::endl;
+    auto observer2 = [](const ChangeEvent<int>& event) {
+        std::cout << "  Observer 2 detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.newValue.has_value()) std::cout << " (new value: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
 
     std::cout << "\n--- Registering observers ---" << std::endl;
-    oc.addObserver(observer1);
-    oc.addObserver(observer2);
+    ObservableContainer<int>::ObserverHandle observer1_handle = oc.addObserver(observer1);
+    ObservableContainer<int>::ObserverHandle observer2_handle = oc.addObserver(observer2);
 
     PrintContainer(oc, "Initial state");
 
@@ -90,19 +97,28 @@ int main() {
     PrintContainer(oc);
 
     std::cout << "\n--- Testing removeObserver ---" << std::endl;
-    auto observer3 = [](const ChangeEvent& event) {
-        std::cout << "    Observer 3 detected: " << ChangeTypeToString(event.type) << std::endl;
+    auto observer3 = [](const ChangeEvent<int>& event) {
+        std::cout << "    Observer 3 detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
 
     std::cout << "Adding Observer 3..." << std::endl;
-    oc.addObserver(observer3);
+    ObservableContainer<int>::ObserverHandle observer3_handle = oc.addObserver(observer3);
 
     std::cout << "\n--- Performing action with Observer 3 active: push_back(30) ---" << std::endl;
     oc.push_back(30);
     PrintContainer(oc);
 
-    std::cout << "\nRemoving Observer 3..." << std::endl;
-    oc.removeObserver(observer3); // Attempt to remove observer3
+    std::cout << "\nRemoving Observer 3 using its handle..." << std::endl;
+    bool removed_observer3 = oc.removeObserver(observer3_handle);
+    if (removed_observer3) {
+        std::cout << "Observer 3 successfully removed." << std::endl;
+    } else {
+        std::cout << "Observer 3 could not be removed (already removed or invalid handle)." << std::endl;
+    }
 
     std::cout << "\n--- Performing action after Observer 3 removal: push_back(40) ---" << std::endl;
     oc.push_back(40);
@@ -128,10 +144,15 @@ int main() {
 
     std::cout << "\n\n--- Testing Copy and Move Semantics ---" << std::endl;
     ObservableContainer<int> oc_source;
-    auto source_obs = [](const ChangeEvent& event) {
-        std::cout << "Source Observer (oc_source) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle source_obs_handle;
+    auto source_obs = [&](const ChangeEvent<int>& event) {
+        std::cout << "Source Observer (oc_source) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_source.addObserver(source_obs);
+    source_obs_handle = oc_source.addObserver(source_obs);
     oc_source.push_back(1);
     oc_source.push_back(2);
     oc_source.push_back(3);
@@ -142,10 +163,15 @@ int main() {
     ObservableContainer<int> oc_copy_ctor = oc_source;
     PrintContainer(oc_copy_ctor, "oc_copy_ctor (after copy from oc_source)");
     PrintContainer(oc_source, "oc_source (after copy to oc_copy_ctor - should be unchanged)");
-    auto copy_ctor_obs = [](const ChangeEvent& event) {
-        std::cout << "CopyCtor Observer (oc_copy_ctor) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle copy_ctor_obs_handle;
+    auto copy_ctor_obs = [&](const ChangeEvent<int>& event) {
+        std::cout << "CopyCtor Observer (oc_copy_ctor) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_copy_ctor.addObserver(copy_ctor_obs);
+    copy_ctor_obs_handle = oc_copy_ctor.addObserver(copy_ctor_obs);
     std::cout << "Action: oc_copy_ctor.push_back(4)" << std::endl;
     oc_copy_ctor.push_back(4); // copy_ctor_obs should trigger
     std::cout << "Action: oc_source.push_back(0)" << std::endl;
@@ -155,10 +181,15 @@ int main() {
     std::cout << "\n--- Test: Copy Assignment (oc_copy_assign = oc_source) ---" << std::endl;
     ObservableContainer<int> oc_copy_assign;
     oc_copy_assign.push_back(99);
-    auto copy_assign_obs_old = [](const ChangeEvent& event) {
-        std::cout << "CopyAssign OLD Observer (oc_copy_assign) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle copy_assign_obs_old_handle;
+    auto copy_assign_obs_old = [&](const ChangeEvent<int>& event) {
+        std::cout << "CopyAssign OLD Observer (oc_copy_assign) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_copy_assign.addObserver(copy_assign_obs_old);
+    copy_assign_obs_old_handle = oc_copy_assign.addObserver(copy_assign_obs_old);
     std::cout << "Action: oc_copy_assign.push_back(77) (before assignment)" << std::endl;
     oc_copy_assign.push_back(77); // copy_assign_obs_old should trigger
     std::cout << "Action: oc_copy_assign = oc_source" << std::endl;
@@ -170,11 +201,16 @@ int main() {
     PrintContainer(oc_copy_assign, "oc_copy_assign (after assign from oc_source)");
     PrintContainer(oc_source, "oc_source (after assign to oc_copy_assign - should be unchanged)");
     std::cout << "Action: oc_copy_assign.push_back(5) (after assignment)" << std::endl;
-    oc_copy_assign.push_back(5); // copy_assign_obs_old should NOT trigger
-    auto copy_assign_obs_new = [](const ChangeEvent& event) {
-        std::cout << "CopyAssign NEW Observer (oc_copy_assign) detected: " << ChangeTypeToString(event.type) << std::endl;
+    oc_copy_assign.push_back(5); // copy_assign_obs_old_handle should NOT trigger as observers are cleared on assignment
+    ObservableContainer<int>::ObserverHandle copy_assign_obs_new_handle;
+    auto copy_assign_obs_new = [&](const ChangeEvent<int>& event) {
+        std::cout << "CopyAssign NEW Observer (oc_copy_assign) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_copy_assign.addObserver(copy_assign_obs_new);
+    copy_assign_obs_new_handle = oc_copy_assign.addObserver(copy_assign_obs_new);
     std::cout << "Action: oc_copy_assign.push_back(6) (with new observer)" << std::endl;
     oc_copy_assign.push_back(6); // copy_assign_obs_new should trigger
     std::cout << "Action: oc_source.modify(0, 11)" << std::endl;
@@ -183,20 +219,30 @@ int main() {
     // Test Move Construction
     std::cout << "\n--- Test: Move Construction (oc_move_ctor = std::move(oc_source_for_move)) ---" << std::endl;
     ObservableContainer<int> oc_source_for_move;
-    auto source_for_move_obs = [](const ChangeEvent& event) {
-        std::cout << "SourceForMove Observer (oc_source_for_move) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle source_for_move_obs_handle;
+    auto source_for_move_obs = [&](const ChangeEvent<int>& event) {
+        std::cout << "SourceForMove Observer (oc_source_for_move) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_source_for_move.addObserver(source_for_move_obs);
+    source_for_move_obs_handle = oc_source_for_move.addObserver(source_for_move_obs);
     oc_source_for_move.push_back(10);
     oc_source_for_move.push_back(20);
     PrintContainer(oc_source_for_move, "oc_source_for_move (before move)");
     ObservableContainer<int> oc_move_ctor = std::move(oc_source_for_move);
     PrintContainer(oc_move_ctor, "oc_move_ctor (after move from oc_source_for_move)");
     PrintContainer(oc_source_for_move, "oc_source_for_move (after move - should be empty/valid)");
-    auto move_ctor_obs = [](const ChangeEvent& event) {
-        std::cout << "MoveCtor Observer (oc_move_ctor) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle move_ctor_obs_handle;
+    auto move_ctor_obs = [&](const ChangeEvent<int>& event) {
+        std::cout << "MoveCtor Observer (oc_move_ctor) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_move_ctor.addObserver(move_ctor_obs);
+    move_ctor_obs_handle = oc_move_ctor.addObserver(move_ctor_obs);
     std::cout << "Action: oc_move_ctor.push_back(30)" << std::endl;
     oc_move_ctor.push_back(30); // move_ctor_obs should trigger
     std::cout << "Action: oc_source_for_move.push_back(1000) (after being moved from)" << std::endl;
@@ -206,30 +252,45 @@ int main() {
     std::cout << "\n--- Test: Move Assignment (oc_move_assign = std::move(oc_source_for_move2)) ---" << std::endl;
     ObservableContainer<int> oc_move_assign;
     oc_move_assign.push_back(55);
-    auto move_assign_obs_old = [](const ChangeEvent& event) {
-        std::cout << "MoveAssign OLD Observer (oc_move_assign) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle move_assign_obs_old_handle;
+    auto move_assign_obs_old = [&](const ChangeEvent<int>& event) {
+        std::cout << "MoveAssign OLD Observer (oc_move_assign) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_move_assign.addObserver(move_assign_obs_old);
+    move_assign_obs_old_handle = oc_move_assign.addObserver(move_assign_obs_old);
     std::cout << "Action: oc_move_assign.push_back(66) (before assignment)" << std::endl;
     oc_move_assign.push_back(66); // move_assign_obs_old should trigger
     ObservableContainer<int> oc_source_for_move2;
     oc_source_for_move2.push_back(70);
     oc_source_for_move2.push_back(80);
-    auto source_for_move2_obs = [](const ChangeEvent& event) {
-        std::cout << "SourceForMove2 Observer (oc_source_for_move2) detected: " << ChangeTypeToString(event.type) << std::endl;
+    ObservableContainer<int>::ObserverHandle source_for_move2_obs_handle;
+    auto source_for_move2_obs = [&](const ChangeEvent<int>& event) {
+        std::cout << "SourceForMove2 Observer (oc_source_for_move2) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_source_for_move2.addObserver(source_for_move2_obs);
+    source_for_move2_obs_handle = oc_source_for_move2.addObserver(source_for_move2_obs);
     PrintContainer(oc_source_for_move2, "oc_source_for_move2 (before move assign)");
     std::cout << "Action: oc_move_assign = std::move(oc_source_for_move2)" << std::endl;
-    oc_move_assign = std::move(oc_source_for_move2); // BatchUpdate should be logged by oc_move_assign's own observers (none after clear)
+    oc_move_assign = std::move(oc_source_for_move2); 
     PrintContainer(oc_move_assign, "oc_move_assign (after move assign from oc_source_for_move2)");
     PrintContainer(oc_source_for_move2, "oc_source_for_move2 (after move assign - should be empty/valid)");
     std::cout << "Action: oc_move_assign.push_back(90) (after assignment)" << std::endl;
-    oc_move_assign.push_back(90); // move_assign_obs_old should NOT trigger
-    auto move_assign_obs_new = [](const ChangeEvent& event) {
-        std::cout << "MoveAssign NEW Observer (oc_move_assign) detected: " << ChangeTypeToString(event.type) << std::endl;
+    oc_move_assign.push_back(90); // move_assign_obs_old_handle should NOT trigger
+    ObservableContainer<int>::ObserverHandle move_assign_obs_new_handle;
+    auto move_assign_obs_new = [&](const ChangeEvent<int>& event) {
+        std::cout << "MoveAssign NEW Observer (oc_move_assign) detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc_move_assign.addObserver(move_assign_obs_new);
+    move_assign_obs_new_handle = oc_move_assign.addObserver(move_assign_obs_new);
     std::cout << "Action: oc_move_assign.push_back(100) (with new observer)" << std::endl;
     oc_move_assign.push_back(100); // move_assign_obs_new should trigger
     std::cout << "Action: oc_source_for_move2.push_back(2000) (after being moved from)" << std::endl;
@@ -237,18 +298,28 @@ int main() {
     
     std::cout << "\n--- End of Copy and Move Semantics Tests ---" << std::endl;
 
-    // Clean up main observers from original tests if necessary, or re-declare 'oc' for ScopedModifier test
-    // For simplicity, the 'oc' from ScopedModifier test is separate.
-    // We can remove observers from oc_source and the 'oc' used in ScopedModifier to avoid confusion if tests were merged.
-    oc_source.removeObserver(source_obs); // removeObserver has limitations with lambdas, but good practice to call
+    // Clean up example:
+    if (source_obs_handle) oc_source.removeObserver(source_obs_handle);
+    if (copy_ctor_obs_handle) oc_copy_ctor.removeObserver(copy_ctor_obs_handle);
+    // copy_assign_obs_old_handle is invalidated by assignment, no need to remove
+    if (copy_assign_obs_new_handle) oc_copy_assign.removeObserver(copy_assign_obs_new_handle);
+    // source_for_move_obs_handle is on a moved-from object, observers cleared
+    if (move_ctor_obs_handle) oc_move_ctor.removeObserver(move_ctor_obs_handle);
+    // move_assign_obs_old_handle is invalidated by assignment
+    // source_for_move2_obs_handle is on a moved-from object
+    if (move_assign_obs_new_handle) oc_move_assign.removeObserver(move_assign_obs_new_handle);
 
 
     std::cout << "\n--- Testing ScopedModifier ---" << std::endl;
     // Add a new observer to specifically see ScopedModifier effects
-    auto scopedTestObserver = [](const ChangeEvent& event){
-        std::cout << "ScopedTestObserver detected: " << ChangeTypeToString(event.type) << std::endl;
+    auto scopedTestObserver = [](const ChangeEvent<int>& event){
+        std::cout << "ScopedTestObserver detected: " << ChangeTypeToString(event.type);
+        if (event.index.has_value()) std::cout << " at index " << event.index.value();
+        if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
+        if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        std::cout << std::endl;
     };
-    oc.addObserver(scopedTestObserver);
+    ObservableContainer<int>::ObserverHandle scopedTestObserverHandle = oc.addObserver(scopedTestObserver);
 
     std::cout << "Clearing container before ScopedModifier test..." << std::endl;
     oc.clear(); // This clear is outside the batch, should notify normally.
@@ -288,8 +359,11 @@ int main() {
     PrintContainer(oc, "Final state after ScopedModifier");
     std::cout << "A 'BatchUpdate' notification should have appeared from all observers." << std::endl;
 
-    // Clean up the specific observer for this test if desired, though not strictly necessary for this example
-    // oc.removeObserver(scopedTestObserver); // `removeObserver` has known limitations with lambdas
+    // Clean up the specific observer for this test
+    oc.removeObserver(scopedTestObserverHandle); 
+    oc.removeObserver(observer1_handle); // Clean up remaining observers
+    oc.removeObserver(observer2_handle);
+
 
     std::cout << "\n--- End of ScopedModifier tests ---" << std::endl;
 
