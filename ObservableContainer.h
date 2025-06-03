@@ -126,6 +126,14 @@ private:
 
         if (should_call_observers && !observers_to_call_functions.empty()) {
             ChangeEvent<T> event{type, index, oldValue, newValue};
+            if (type == ChangeType::SizeChanged) {
+                // For SizeChanged events, populate the newSize field.
+                // This requires re-acquiring the mutex to safely access data_.size().
+                // This is a pragmatic choice to limit the scope of changes for this enhancement,
+                // avoiding modification of all notify call sites.
+                std::lock_guard<std::mutex> lock(mutex_);
+                event.newSize = data_.size();
+            }
             for (const auto& observer_func : observers_to_call_functions) {
                 if (observer_func) {
                     observer_func(event);
@@ -160,11 +168,19 @@ public:
                 data_ = other.data_;
                 data_actually_changed = true;
             }
+            // Deliberately clear existing observers on this container.
+            // Observers are considered specific to the container's lifecycle and identity.
+            // A copy assignment replaces the state entirely, so old observers
+            // are removed. New observers can be added if needed after assignment.
             observers_.clear(); 
             defer_level_ = 0;   
             batch_changed_ = false; 
         } 
         if (data_actually_changed) {
+            // Notify for BatchUpdate. Since observers_ was cleared, this notification
+            // will not be received by any pre-existing observers of this instance.
+            // It serves as a hook for observers added *after* this assignment,
+            // or if a derived class has a different observer management strategy.
             notify(ChangeType::BatchUpdate);
         }
         return *this;
@@ -193,16 +209,28 @@ public:
         { 
             std::scoped_lock lock(mutex_, other.mutex_);
             data_ = std::move(other.data_);
-            // observers_ are intentionally not cleared for 'this'
-            defer_level_ = other.defer_level_; // Or reset, depending on desired state for 'this'
-            batch_changed_ = other.batch_changed_; // Or reset
+
+            // Deliberately clear existing observers on this container, similar to copy assignment.
+            // The container's state is being entirely replaced by the moved content.
+            // This aligns with observed behavior in main.cpp where old observers
+            // on the target of a move assignment are not active post-assignment.
+            observers_.clear(); // Clear observers on the target instance.
+
+            // 'defer_level_' and 'batch_changed_' are taken from 'other'.
+            // Consider if 'this' container's defer_level/batch_changed should be reset or also retain its value.
+            // Current behavior: take from 'other'.
+            defer_level_ = other.defer_level_;
+            batch_changed_ = other.batch_changed_;
             
             other.data_.clear(); 
-            other.observers_.clear();
+            other.observers_.clear(); // Observers of 'other' are cleared.
             other.defer_level_ = 0;
             other.batch_changed_ = false;
             other.is_moved_from_ = true;
         } 
+        // Notify for BatchUpdate. Since observers_ on 'this' was cleared, this notification
+        // will not be received by any pre-existing observers of this instance.
+        // It serves as a hook for observers added *after* this assignment.
         notify(ChangeType::BatchUpdate);
         return *this;
     }
@@ -269,6 +297,30 @@ public:
         notify(ChangeType::SizeChanged);
     }
 
+    void push_back(T&& value) {
+        size_t pushed_at_index;
+        // The 'value' parameter will be in a moved-from state after data_.push_back.
+        // For notification, we need the value as it exists in the container.
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            data_.push_back(std::move(value)); // Moves value
+            pushed_at_index = data_.size() - 1;
+        }
+
+        T new_value_in_container;
+        {
+            // Re-acquire lock to safely access the element for notification.
+            // This ensures thread-safety if other operations could occur.
+            std::lock_guard<std::mutex> lock(mutex_);
+            // Use ObservableContainerHelpers::ContainerAccess to get the value
+            // as it abstracts away differences between std::vector and std::list for .at() vs iterating.
+            new_value_in_container = ObservableContainerHelpers::ContainerAccess<ActualContainer<T, Allocator>, T>::get(data_, pushed_at_index);
+        }
+
+        notify(ChangeType::ElementAdded, pushed_at_index, std::nullopt, new_value_in_container);
+        notify(ChangeType::SizeChanged);
+    }
+
     void pop_back() {
         bool modified = false;
         T old_value;
@@ -314,7 +366,7 @@ public:
         return ObservableContainerHelpers::ContainerAccess<ActualContainer<T, Allocator>, T>::get(data_, index);
     }
 
-    const T& const_at(size_t index) const {
+    const T& at(size_t index) const { // Renamed from const_at
         std::lock_guard<std::mutex> lock(mutex_);
         return ObservableContainerHelpers::ContainerAccess<ActualContainer<T, Allocator>, T>::get(data_, index);
     }

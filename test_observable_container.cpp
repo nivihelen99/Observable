@@ -73,7 +73,6 @@ TYPED_TEST(ObservableContainerTest, DefaultConstructionIsEmpty) {
     ASSERT_EQ(0, container.size());
 }
 
-/* Remaining tests will be commented out for this minimal step
 // Test case for push_back
 TYPED_TEST(ObservableContainerTest, PushBackObservesCorrectEvents) {
     using T = typename TestFixture::T; // Use T from fixture
@@ -84,8 +83,16 @@ TYPED_TEST(ObservableContainerTest, PushBackObservesCorrectEvents) {
         received_events.push_back(event);
     });
 
-    T val1 = (std::is_same<T, int>::value) ? T(10) : T("hello");
-    T val2 = (std::is_same<T, int>::value) ? T(20) : T("world");
+    T val1;
+    T val2;
+    if constexpr (std::is_same_v<T, int>) {
+        val1 = 10;
+        val2 = 20;
+    } else if constexpr (std::is_same_v<T, std::string>) {
+        val1 = "hello";
+        val2 = "world";
+    }
+    // Note: Add static_assert(false, "Unsupported type") for non-test types if necessary
 
     container.push_back(val1);
     EXPECT_EQ(container.size(), 1);
@@ -98,6 +105,11 @@ TYPED_TEST(ObservableContainerTest, PushBackObservesCorrectEvents) {
     EXPECT_EQ(received_events[0].index.value(), 0);
     ASSERT_TRUE(received_events[0].newValue.has_value());
     EXPECT_EQ(received_events[0].newValue.value(), val1);
+    // Check newSize for SizeChanged event (event at index 1)
+    if (received_events.size() == 2 && received_events[1].type == ChangeType::SizeChanged) {
+        ASSERT_TRUE(received_events[1].newSize.has_value());
+        EXPECT_EQ(received_events[1].newSize.value(), container.size());
+    }
     received_events.clear();
 
     container.push_back(val2);
@@ -110,12 +122,65 @@ TYPED_TEST(ObservableContainerTest, PushBackObservesCorrectEvents) {
     EXPECT_EQ(received_events[0].index.value(), 1);
     ASSERT_TRUE(received_events[0].newValue.has_value());
     EXPECT_EQ(received_events[0].newValue.value(), val2);
+    // Check newSize for SizeChanged event (event at index 1)
+    if (received_events.size() == 2 && received_events[1].type == ChangeType::SizeChanged) {
+        ASSERT_TRUE(received_events[1].newSize.has_value());
+        EXPECT_EQ(received_events[1].newSize.value(), container.size());
+    }
+    received_events.clear();
+}
+
+TYPED_TEST(ObservableContainerTest, PushBackRvalueObservesCorrectEvents) {
+    using T = typename TestFixture::T;
+    typename TestFixture::FullContainerType container;
+    std::vector<ChangeEvent<T>> received_events;
+
+    container.addObserver([&](const ChangeEvent<T>& event) {
+        received_events.push_back(event);
+    });
+
+    T val1_orig;
+    if constexpr (std::is_same_v<T, int>) {
+        val1_orig = 10;
+    } else if constexpr (std::is_same_v<T, std::string>) {
+        val1_orig = "movable_string";
+    }
+
+    T val1_to_move = val1_orig; // Copy for moving
+
+    container.push_back(std::move(val1_to_move));
+    EXPECT_EQ(container.size(), 1);
+    ASSERT_FALSE(container.empty());
+    EXPECT_EQ(container.at(0), val1_orig);
+
+    this->AssertEventSequenceTypes(received_events, {ChangeType::ElementAdded, ChangeType::SizeChanged});
+    ASSERT_EQ(received_events.size(), 2);
+    EXPECT_EQ(received_events[0].type, ChangeType::ElementAdded);
+    ASSERT_TRUE(received_events[0].index.has_value());
+    EXPECT_EQ(received_events[0].index.value(), 0);
+    ASSERT_TRUE(received_events[0].newValue.has_value());
+    EXPECT_EQ(received_events[0].newValue.value(), val1_orig); // Check the value is correct
+    // Check newSize for SizeChanged event (event at index 1)
+    if (received_events.size() == 2 && received_events[1].type == ChangeType::SizeChanged) {
+        ASSERT_TRUE(received_events[1].newSize.has_value());
+        EXPECT_EQ(received_events[1].newSize.value(), container.size());
+    }
+
+    // For std::string, check if val1_to_move is in a valid moved-from state.
+    // The C++ standard states that a moved-from std::string is in a "valid but unspecified state".
+    // A common outcome is an empty string, but this is not guaranteed.
+    // Checking that it's not equal to its original state (if it was non-empty) or that it is empty
+    // are reasonable checks, but the most important is that the container holds the correct value.
+    if constexpr (std::is_same_v<T, std::string>) {
+        // Example check: EXPECT_TRUE(val1_to_move.empty()); // This might be too strict.
+        // It's enough that container.at(0) has the correct value.
+    }
     received_events.clear();
 }
 
 // ... (ALL OTHER TESTS COMMENTED OUT FOR THIS STEP) ...
 
-*/
+
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
