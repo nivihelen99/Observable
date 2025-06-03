@@ -37,6 +37,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
 
@@ -44,6 +47,9 @@ int main() {
         std::cout << "  Observer 2 detected: " << ChangeTypeToString(event.type);
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.newValue.has_value()) std::cout << " (new value: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
 
@@ -102,6 +108,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
 
@@ -150,6 +159,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     source_obs_handle = oc_source.addObserver(source_obs);
@@ -169,6 +181,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     copy_ctor_obs_handle = oc_copy_ctor.addObserver(copy_ctor_obs);
@@ -187,6 +202,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     copy_assign_obs_old_handle = oc_copy_assign.addObserver(copy_assign_obs_old);
@@ -208,6 +226,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     copy_assign_obs_new_handle = oc_copy_assign.addObserver(copy_assign_obs_new);
@@ -225,6 +246,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     source_for_move_obs_handle = oc_source_for_move.addObserver(source_for_move_obs);
@@ -240,6 +264,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     move_ctor_obs_handle = oc_move_ctor.addObserver(move_ctor_obs);
@@ -258,6 +285,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     move_assign_obs_old_handle = oc_move_assign.addObserver(move_assign_obs_old);
@@ -272,6 +302,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     source_for_move2_obs_handle = oc_source_for_move2.addObserver(source_for_move2_obs);
@@ -288,6 +321,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     move_assign_obs_new_handle = oc_move_assign.addObserver(move_assign_obs_new);
@@ -317,6 +353,9 @@ int main() {
         if (event.index.has_value()) std::cout << " at index " << event.index.value();
         if (event.oldValue.has_value()) std::cout << " (old: " << event.oldValue.value() << ")";
         if (event.newValue.has_value()) std::cout << " (new: " << event.newValue.value() << ")";
+        if (event.type == ChangeType::SizeChanged && event.newSize.has_value()) {
+            std::cout << " (new size: " << event.newSize.value() << ")";
+        }
         std::cout << std::endl;
     };
     ObservableContainer<int>::ObserverHandle scopedTestObserverHandle = oc.addObserver(scopedTestObserver);
